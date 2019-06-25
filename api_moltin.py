@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import requests
 from pprint import pprint
@@ -61,6 +62,21 @@ def create_customer(name, email):
 
 
 @is_token_works
+def create_file(file):
+    headers = get_headers()
+    headers.update({'Content-Type': 'multipart/form-data'})
+
+    files = {
+        'file': file,
+        'public': True
+    }
+
+    url = 'https://api.moltin.com/v2/files'
+    response = requests.post(url, headers=headers, files=files)
+    return response.json()
+
+
+@is_token_works
 def create_product(product_data):
     headers = get_headers()
     headers.update({'Content-Type': 'application/json'})
@@ -88,18 +104,14 @@ def create_product(product_data):
 
 
 @is_token_works
-def create_file(file):
-    headers = get_headers()
-    headers.update({'Content-Type': 'multipart/form-data'})
+def create_products(file='menu.json'):
+    with open(file, 'r') as file:
+        products = json.load(file)
 
-    files = {
-        'file': file,
-        'public': True
-    }
-
-    url = 'https://api.moltin.com/v2/files'
-    response = requests.post(url, headers=headers, files=files)
-    return response.json()
+    for product in products:
+        product_id = create_product(product)['data']['id']
+        img_id = create_file(product['product_image']['url'])['data']['id']
+        add_img_to_product(product_id, img_id)
 
 
 @is_token_works
