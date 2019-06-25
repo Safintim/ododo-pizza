@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from pprint import pprint
 from dotenv import load_dotenv
@@ -42,6 +43,33 @@ def create_customer(name, email):
 
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
+def create_product(product_data):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+
+    product_data = {
+        'type': 'product',
+        'name': product_data['name'],
+        'slug': product_data['name'],
+        'sku': f'{product_data["name"]}-{random.randint(10, 10000)}',
+        'description': product_data['description'],
+        'manage_stock': False,
+        'price': [
+            {
+                'amount': product_data['price'],
+                'currency': 'RUB'
+            }
+        ],
+        'status': 'live',
+        'commodity_type': 'physical'
+    }
+
+    url = 'https://api.moltin.com/v2/products'
+    response = requests.post(url, headers=headers, json={'data': product_data})
     return response.json()
 
 
