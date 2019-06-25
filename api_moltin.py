@@ -13,7 +13,6 @@ TOKEN = os.environ.get('ACCESS_TOKEN_MOLTIN')
 
 
 def is_token_works(func):
-
     def decorator(*args, **kwargs):
         try:
             response = func(*args, **kwargs)
@@ -25,6 +24,21 @@ def is_token_works(func):
                 response = func(*args, **kwargs)
         return response
     return decorator
+
+
+@is_token_works
+def add_img_to_product(product_id, img_id):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+
+    data = {
+        'type': 'main_image',
+        'id': img_id
+    }
+
+    url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
+    response = requests.post(url, headers=headers, json={'data': data})
+    return response.json()
 
 
 @is_token_works
