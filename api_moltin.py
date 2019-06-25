@@ -38,7 +38,8 @@ def add_img_to_product(product_id, img_id):
     }
 
     url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
-    response = requests.post(url, headers=headers, json={'data': data})
+    response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
+    response.raise_for_status()
     return response.json()
 
 
@@ -56,7 +57,7 @@ def create_customer(name, email):
         }
     }
 
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload, proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
@@ -72,7 +73,8 @@ def create_file(file):
     }
 
     url = 'https://api.moltin.com/v2/files'
-    response = requests.post(url, headers=headers, files=files)
+    response = requests.post(url, headers=headers, files=files, proxies=PROXIES)
+    response.raise_for_status()
     return response.json()
 
 
@@ -99,7 +101,8 @@ def create_product(product_data):
     }
 
     url = 'https://api.moltin.com/v2/products'
-    response = requests.post(url, headers=headers, json={'data': product_data})
+    response = requests.post(url, headers=headers, json={'data': product_data}, proxies=PROXIES)
+    response.raise_for_status()
     return response.json()
 
 
@@ -117,7 +120,7 @@ def create_products(file='menu.json'):
 @is_token_works
 def delete_product_from_cart(client_id, product_id):
     url = f'https://api.moltin.com/v2/carts/{client_id}/items/{product_id}'
-    response = requests.delete(url, headers=get_headers())
+    response = requests.delete(url, headers=get_headers(), proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
@@ -151,7 +154,7 @@ def get_headers():
 @is_token_works
 def get_customer(client_id):
     url = f'https://api.moltin.com/v2/customers/{client_id}'
-    response = requests.get(url, headers=get_headers())
+    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
@@ -159,7 +162,7 @@ def get_customer(client_id):
 @is_token_works
 def get_customers():
     url = 'https://api.moltin.com/v2/customers/'
-    response = requests.get(url, headers=get_headers())
+    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
