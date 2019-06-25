@@ -74,6 +74,21 @@ def create_product(product_data):
 
 
 @is_token_works
+def create_file(file):
+    headers = get_headers()
+    headers.update({'Content-Type': 'multipart/form-data'})
+
+    files = {
+        'file': file,
+        'public': True
+    }
+
+    url = 'https://api.moltin.com/v2/files'
+    response = requests.post(url, headers=headers, files=files)
+    return response.json()
+
+
+@is_token_works
 def delete_product_from_cart(client_id, product_id):
     url = f'https://api.moltin.com/v2/carts/{client_id}/items/{product_id}'
     response = requests.delete(url, headers=get_headers())
