@@ -132,6 +132,39 @@ def create_flow(name_flow, description):
     return response.json()
 
 
+def create_flow_pizzeria():
+    fields = [
+        {
+            'name': 'address',
+            'slug': 'address',
+            'type': 'address',
+            'desription': 'Pizzeria address'
+        },
+        {
+            'name': 'alias',
+            'slug': 'alias',
+            'type': 'string',
+            'description': 'Pizzeria name'
+        },
+        {
+            'name': 'longitude',
+            'slug': 'longitude',
+            'type': 'float',
+            'description': 'Longitude'
+        },
+        {
+            'name': 'latitude',
+            'slug': 'latitude',
+            'type': 'float',
+            'description': 'Latitude'
+        },
+    ]
+
+    flow_id = create_flow('Pizzeria', 'Ododo Pizzeria')['data']['id']
+    for field in fields:
+        create_field(field, flow_id)
+
+
 @is_token_works
 def create_product(product_data):
     headers = get_headers()
@@ -281,8 +314,8 @@ def push_product_to_cart_by_id(product_id, client_id, amount):
 
 def main():
     load_dotenv()
-    pprint(get_access_token())
     pprint(create_products())
+    pprint(create_flow_pizzeria())
 
 
 if __name__ == '__main__':
