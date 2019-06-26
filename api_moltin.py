@@ -1,7 +1,9 @@
 import os
+import re
 import json
 import random
 import requests
+from tools import convert_str_to_slug, download_and_save_img
 from pprint import pprint
 from dotenv import load_dotenv
 
@@ -66,7 +68,8 @@ def create_customer(name, email):
 def create_file(file):
     headers = get_headers()
     headers.update({'Content-Type': 'multipart/form-data'})
-
+    print(file)
+    # with open(file, 'rb') as f:
     files = {
         'file': file,
         'public': True
@@ -74,6 +77,25 @@ def create_file(file):
 
     url = 'https://api.moltin.com/v2/files'
     response = requests.post(url, headers=headers, files=files, proxies=PROXIES)
+    pprint(response.json())
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
+def create_flow(name_flow, description):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+
+    data = {
+        'type': 'flow',
+        'name': name_flow,
+        'slug': name_flow,
+        'description': description,
+        'enabled': True
+    }
+    url = 'https://api.moltin.com/v2/flows'
+    response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
@@ -82,18 +104,18 @@ def create_file(file):
 def create_product(product_data):
     headers = get_headers()
     headers.update({'Content-Type': 'application/json'})
-
     product_data = {
         'type': 'product',
         'name': product_data['name'],
-        'slug': product_data['name'],
+        'slug': convert_str_to_slug(product_data['name']),
         'sku': f'{product_data["name"]}-{random.randint(10, 10000)}',
         'description': product_data['description'],
         'manage_stock': False,
         'price': [
             {
                 'amount': product_data['price'],
-                'currency': 'RUB'
+                'currency': 'RUB',
+                'includes_tax': False
             }
         ],
         'status': 'live',
@@ -110,11 +132,18 @@ def create_product(product_data):
 def create_products(file='menu.json'):
     with open(file, 'r') as file:
         products = json.load(file)
-
+    # 435276e0-95c8-4dda-ad4b-460e2a0b847a
+    # print(products)
     for product in products:
-        product_id = create_product(product)['data']['id']
-        img_id = create_file(product['product_image']['url'])['data']['id']
-        add_img_to_product(product_id, img_id)
+        # pprint(create_product(product))
+        # product_id = create_product(product)['data']['id']
+        # print(product_id)
+        url_img_product = product['product_image']['url']
+        path_to_img = download_and_save_img(url_img_product, product['name'])
+        img_id = create_file(path_to_img)['data']['id']
+        print(img_id)
+        # print(img_id)
+        # add_img_to_product(product_id, img_id)
 
 
 @is_token_works
@@ -226,6 +255,7 @@ def push_product_to_cart_by_id(product_id, client_id, amount):
 def main():
     load_dotenv()
     pprint(get_access_token())
+    pprint(create_products())
 
 
 if __name__ == '__main__':
