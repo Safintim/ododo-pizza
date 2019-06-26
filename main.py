@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 
 with open('addresses.json', 'r') as file:
     addresses = json.load(file)
@@ -6,5 +7,5 @@ with open('addresses.json', 'r') as file:
 with open('menu.json', 'r') as file:
     menu = json.load(file)
 
-print(addresses)
-print(menu)
+pprint(addresses)
+pprint(menu)
