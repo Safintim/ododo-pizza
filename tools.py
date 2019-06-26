@@ -25,7 +25,7 @@ def download_and_save_img(url, filename):
     pathlib.Path(IMAGE_PATH).mkdir(exist_ok=True)
     response = requests.get(url)
     response.raise_for_status()
-    filename = f'{filename}{os.path.splitext(url)[1]}'
+    filename = f'{convert_cyrillic_to_latin(filename)}{os.path.splitext(url)[1]}'
     print(filename)
     with open(IMAGE_PATH+filename, 'wb') as f:
         f.write(response.content)

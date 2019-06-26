@@ -41,6 +41,7 @@ def add_img_to_product(product_id, img_id):
 
     url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
     response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
+    print(response.json())
     response.raise_for_status()
     return response.json()
 
@@ -67,18 +68,18 @@ def create_customer(name, email):
 @is_token_works
 def create_file(file):
     headers = get_headers()
-    headers.update({'Content-Type': 'multipart/form-data'})
-    print(file)
-    # with open(file, 'rb') as f:
-    files = {
-        'file': file,
-        'public': True
-    }
 
-    url = 'https://api.moltin.com/v2/files'
-    response = requests.post(url, headers=headers, files=files, proxies=PROXIES)
-    pprint(response.json())
-    response.raise_for_status()
+    print(file)
+    with open(file, 'rb') as f:
+        files = {
+            'file': f,
+            'public': True
+        }
+
+        url = 'https://api.moltin.com/v2/files'
+        response = requests.post(url, headers=headers, files=files, proxies=PROXIES)
+        pprint(response.json())
+        response.raise_for_status()
     return response.json()
 
 
@@ -163,18 +164,13 @@ def create_product(product_data):
 def create_products(file='menu.json'):
     with open(file, 'r') as file:
         products = json.load(file)
-    # 435276e0-95c8-4dda-ad4b-460e2a0b847a
-    # print(products)
+
     for product in products:
-        # pprint(create_product(product))
-        # product_id = create_product(product)['data']['id']
-        # print(product_id)
+        product_id = create_product(product)['data']['id']
         url_img_product = product['product_image']['url']
         path_to_img = download_and_save_img(url_img_product, product['name'])
         img_id = create_file(path_to_img)['data']['id']
-        print(img_id)
-        # print(img_id)
-        # add_img_to_product(product_id, img_id)
+        add_img_to_product(product_id, img_id)
 
 
 @is_token_works
