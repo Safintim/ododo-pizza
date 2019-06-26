@@ -83,6 +83,36 @@ def create_file(file):
 
 
 @is_token_works
+def create_field(field_data, flow_id):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+
+    data = {
+        'type': 'field',
+        'name': field_data['name'],
+        'slug': field_data['slug'],
+        'field_type': field_data['type'],
+        'description': field_data['description'],
+        'required': True,
+        'unique': False,
+        'enabled': True,
+        'relationships': {
+            'flow': {
+                'data': {
+                    'type': 'flow',
+                    'id': flow_id
+                }
+            }
+        }
+    }
+
+    url = 'https://api.moltin.com/v2/flows'
+    response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
 def create_flow(name_flow, description):
     headers = get_headers()
     headers.update({'Content-Type': 'application/json'})
@@ -94,6 +124,7 @@ def create_flow(name_flow, description):
         'description': description,
         'enabled': True
     }
+
     url = 'https://api.moltin.com/v2/flows'
     response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
     response.raise_for_status()
