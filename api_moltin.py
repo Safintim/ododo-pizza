@@ -1,5 +1,4 @@
 import os
-import re
 import json
 import random
 import requests
@@ -107,7 +106,7 @@ def create_field(field_data, flow_id):
         }
     }
 
-    url = 'https://api.moltin.com/v2/flows'
+    url = 'https://api.moltin.com/v2/fields'
     response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
     response.raise_for_status()
     return response.json()
@@ -132,35 +131,8 @@ def create_flow(name_flow, description):
     return response.json()
 
 
-def create_flow_pizzeria():
-    fields = [
-        {
-            'name': 'address',
-            'slug': 'address',
-            'type': 'address',
-            'desription': 'Pizzeria address'
-        },
-        {
-            'name': 'alias',
-            'slug': 'alias',
-            'type': 'string',
-            'description': 'Pizzeria name'
-        },
-        {
-            'name': 'longitude',
-            'slug': 'longitude',
-            'type': 'float',
-            'description': 'Longitude'
-        },
-        {
-            'name': 'latitude',
-            'slug': 'latitude',
-            'type': 'float',
-            'description': 'Latitude'
-        },
-    ]
-
-    flow_id = create_flow('Pizzeria', 'Ododo Pizzeria')['data']['id']
+def create_flow_from_fields(fields, flow_name, flow_desc):
+    flow_id = create_flow(flow_name, flow_desc)['data']['id']
     for field in fields:
         create_field(field, flow_id)
 
@@ -294,6 +266,20 @@ def get_total_amount_from_cart(client_id):
     return response.json()
 
 
+def push_addresses_to_pizzeria(file='addresses.json', flow_slug='Pizzeria'):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+    data = {
+        'type': 'entry',
+        flow_slug: ''
+    }
+
+    url = 'https://api.moltin.com/v2/flows/flow_slug/entries'
+    response = requests.post(url, headers=headers, json={'data': data})
+    response.raise_for_status()
+    return response.json()
+
+
 @is_token_works
 def push_product_to_cart_by_id(product_id, client_id, amount):
     headers = get_headers()
@@ -314,8 +300,36 @@ def push_product_to_cart_by_id(product_id, client_id, amount):
 
 def main():
     load_dotenv()
-    pprint(create_products())
-    pprint(create_flow_pizzeria())
+    fields = [
+        {
+            'name': 'address',
+            'slug': 'address',
+            'type': 'string',
+            'description': 'Pizzeria address'
+        },
+        {
+            'name': 'alias',
+            'slug': 'alias',
+            'type': 'string',
+            'description': 'Pizzeria name'
+        },
+        {
+            'name': 'longitude',
+            'slug': 'longitude',
+            'type': 'float',
+            'description': 'Longitude'
+        },
+        {
+            'name': 'latitude',
+            'slug': 'latitude',
+            'type': 'float',
+            'description': 'Latitude'
+        },
+    ]
+    # pprint(create_products())
+    # pprint(create_flow('test', 'desc'))
+    pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
+    pprint(push_addresses_to_pizzeria())
 
 
 if __name__ == '__main__':
