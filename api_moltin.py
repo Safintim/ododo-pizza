@@ -65,6 +65,24 @@ def create_customer(name, email):
 
 
 @is_token_works
+def create_entry(flow_slug, fields):
+    headers = get_headers()
+    headers.update({'Content-Type': 'application/json'})
+
+    data = {
+        'type': 'entry',
+    }
+
+    for slug, value in fields.items():
+        data.update({slug: value})
+
+    url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
+    response = requests.post(url, headers=get_headers(), json={'data': data}, proxies=PROXIES)
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
 def create_file(file):
     headers = get_headers()
 
@@ -267,17 +285,17 @@ def get_total_amount_from_cart(client_id):
 
 
 def push_addresses_to_pizzeria(file='addresses.json', flow_slug='Pizzeria'):
-    headers = get_headers()
-    headers.update({'Content-Type': 'application/json'})
-    data = {
-        'type': 'entry',
-        flow_slug: ''
-    }
+    with open(file, 'r') as f:
+        addresses = json.load(f)
 
-    url = 'https://api.moltin.com/v2/flows/flow_slug/entries'
-    response = requests.post(url, headers=headers, json={'data': data})
-    response.raise_for_status()
-    return response.json()
+    for address in addresses:
+        fields = {
+            'address': address['address']['full'],
+            'alias': address['alias'],
+            'lon': address['coordinates']['lon'],
+            'lat': address['coordinates']['lat']
+            }
+        create_entry(flow_slug, fields)
 
 
 @is_token_works
@@ -315,20 +333,20 @@ def main():
         },
         {
             'name': 'longitude',
-            'slug': 'longitude',
+            'slug': 'lon',
             'type': 'float',
             'description': 'Longitude'
         },
         {
             'name': 'latitude',
-            'slug': 'latitude',
+            'slug': 'lat',
             'type': 'float',
             'description': 'Latitude'
         },
     ]
     # pprint(create_products())
     # pprint(create_flow('test', 'desc'))
-    pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
+    # pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
     pprint(push_addresses_to_pizzeria())
 
 
