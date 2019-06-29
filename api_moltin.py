@@ -170,7 +170,7 @@ def create_product(product_data):
             {
                 'amount': product_data['price'],
                 'currency': 'RUB',
-                'includes_tax': False
+                'includes_tax': True
             }
         ],
         'status': 'live',
@@ -255,9 +255,16 @@ def get_img_by_id(id):
 
 
 @is_token_works
-def get_products():
-    url = 'https://api.moltin.com/v2/products'
-    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
+def get_products(limit=None, offset=None, url=None):
+    params = {}
+    if not url:
+        params = {
+            'page[limit]': limit,
+            'page[offset]': offset,
+        }
+
+        url = 'https://api.moltin.com/v2/products'
+    response = requests.get(url, headers=get_headers(), params=params, proxies=PROXIES)
     response.raise_for_status()
     return response.json()
 
@@ -344,10 +351,15 @@ def main():
             'description': 'Latitude'
         },
     ]
+    pprint(get_products(6, 0, 'https://api.moltin.com/v2/products?page[limit]=6&page[offset]=6'))
+    # delete_product_from_cart(138457307, '79da0188-f47e-481a-a0c9-9ade7381d83b')
+    # pprint(get_cart(138457307))
+    # pprint(get_product_from_cart('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307))
+    # pprint(push_product_to_cart_by_id('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307, 1))
     # pprint(create_products())
     # pprint(create_flow('test', 'desc'))
     # pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
-    pprint(push_addresses_to_pizzeria())
+    # pprint(push_addresses_to_pizzeria())
 
 
 if __name__ == '__main__':
