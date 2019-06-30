@@ -5,7 +5,7 @@ import logging
 import phonenumbers
 from logs_conf import LogsHandler
 from description import make_text_description_cart, make_text_description_product
-from buttons import (generate_buttons_for_all_products_from_shop, generate_buttons_for_all_products_from_cart,
+from buttons import (generate_buttons_products, generate_buttons_for_all_products_from_cart,
                      generate_buttons_for_description, generate_buttons_for_confirm_personal_data)
 from api_moltin import (get_product_by_id, delete_product_from_cart, get_img_by_id, push_product_to_cart_by_id,
                         get_cart, get_total_amount_from_cart, create_customer)
@@ -24,17 +24,25 @@ database = None
 
 def handle_start(bot, update):
     update_message = update.message or update.callback_query.message
-    keyboard = generate_buttons_for_all_products_from_shop()
-    keyboard.append([InlineKeyboardButton('Корзина', callback_data='Корзина')])
-    keyboard.append([InlineKeyboardButton('Пред. стр.', callback_data='prev')])
-    keyboard.append([InlineKeyboardButton('След. стр.', callback_data='next')])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(generate_buttons_products())
     update_message.reply_text('Пожалуйста, выберите товар:', reply_markup=reply_markup)
     return 'MENU'
 
 
 def handle_menu(bot, update):
-    product_id = update.callback_query.data
+    update_message = update.message or update.callback_query.message
+    query_data = update.callback_query.data
+    client = update_message.chat_id
+    if query_data.startswith('prev') or query_data.startswith('next'):
+        params = query_data.split('/')
+
+        if params[1] != 'None':
+            reply_markup = InlineKeyboardMarkup(generate_buttons_products(params[1], params[2]))
+            update_message.reply_text('Пожалуйста, выберите товар:', reply_markup=reply_markup)
+            bot.delete_message(chat_id=client, message_id=update_message.message_id)
+        return 'MENU'
+
+    product_id = query_data
     product = get_product_by_id(product_id)
 
     img_id = product['data']['relationships']['main_image']['data']['id']
@@ -42,7 +50,6 @@ def handle_menu(bot, update):
 
     keyboard = generate_buttons_for_description(product_id)
     reply_markup = InlineKeyboardMarkup(keyboard)
-    client = update.callback_query.message.chat_id
     bot.send_photo(
         chat_id=client,
         photo=url_img_product,
@@ -51,7 +58,7 @@ def handle_menu(bot, update):
         parse_mode=ParseMode.MARKDOWN)
     bot.delete_message(
         chat_id=client,
-        message_id=update.callback_query.message.message_id)
+        message_id=update_message.message_id)
 
     return 'DESCRIPTION'
 
@@ -76,9 +83,9 @@ def handle_cart(bot, update):
         handle_start(bot, update.callback_query)
         return 'MENU'
     elif update.callback_query.data == 'Оплата':
-        handle_waiting_email(bot, update)
-        update_message.reply_text('\nПришлите, пожалуйста, ваш email')
-        return 'WAITING_EMAIL'
+        handle_waiting_geo(bot, update)
+        update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
+        return 'WAITING_GEO'
     else:
         product_id = update.callback_query.data
         delete_product_from_cart(client_id, product_id)
@@ -97,7 +104,7 @@ def handle_cart(bot, update):
     return 'CART'
 
 
-def handle_waiting_email(bot, update):
+def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
 
     if update.message:
@@ -154,7 +161,7 @@ def handle_confirm_personal_data(bot, update):
         handle_start(bot, update)
         return 'MENU'
     elif update.callback_query.data == 'Неверно':
-        handle_waiting_email(bot, update)
+        handle_waiting_geo(bot, update)
         update_message.reply_text('\nПришлите, пожалуйста, ваш email')
         return 'WAITING_EMAIL'
     return 'CONFIRM_PERSONAL_DATA'
@@ -183,7 +190,7 @@ def handle_users_reply(bot, update):
         'MENU': handle_menu,
         'DESCRIPTION': handle_description,
         'CART': handle_cart,
-        'WAITING_EMAIL': handle_waiting_email,
+        'WAITING_GEO': handle_waiting_geo,
         'WAITING_PHONE_NUMBER': handle_waiting_phone_number,
         'CONFIRM_PERSONAL_DATA': handle_confirm_personal_data
     }
@@ -207,9 +214,10 @@ def get_database_connection():
 
 def handle_error(bot, update, error):
     try:
-        logging.error(f'(pizza) {update}')
+        logging.error(f'(pizza) {update}\n {error}')
         update.message.reply_text(text='Простите, возникла ошибка.')
     except Exception as err:
+        print(err)
         logging.critical(f'(pizza) {err}')
 
 
