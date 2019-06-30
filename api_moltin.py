@@ -247,6 +247,14 @@ def get_customers():
 
 
 @is_token_works
+def get_entries(flow_slug='Pizzeria'):
+    url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
+    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
 def get_img_by_id(id):
     url = f'https://api.moltin.com/v2/files/{id}'
     response = requests.get(url, headers=get_headers(), proxies=PROXIES)
