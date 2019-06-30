@@ -3,6 +3,7 @@ import re
 
 import pathlib
 import requests
+import urllib.parse as urlparse
 
 IMAGE_PATH = 'images/'
 
@@ -31,3 +32,8 @@ def download_and_save_img(url, filename):
         f.write(response.content)
 
     return IMAGE_PATH+filename
+
+
+def get_query_params_from_url(url):
+    parsed = urlparse.urlparse(url)
+    return urlparse.parse_qs(parsed.query)['page[limit]'][0], urlparse.parse_qs(parsed.query)['page[offset]'][0]
