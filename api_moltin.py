@@ -255,15 +255,13 @@ def get_img_by_id(id):
 
 
 @is_token_works
-def get_products(limit=None, offset=None, url=None):
-    params = {}
-    if not url:
-        params = {
-            'page[limit]': limit,
-            'page[offset]': offset,
-        }
+def get_products(limit, offset):
+    params = {
+        'page[limit]': limit,
+        'page[offset]': offset,
+    }
 
-        url = 'https://api.moltin.com/v2/products'
+    url = 'https://api.moltin.com/v2/products'
     response = requests.get(url, headers=get_headers(), params=params, proxies=PROXIES)
     response.raise_for_status()
     return response.json()
