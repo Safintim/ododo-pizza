@@ -2,18 +2,18 @@ import re
 import os
 import redis
 import logging
-import phonenumbers
+import yandex_geocoder
 from logs_conf import LogsHandler
 from description import make_text_description_cart, make_text_description_product
 from buttons import (generate_buttons_products, generate_buttons_for_all_products_from_cart,
                      generate_buttons_for_description, generate_buttons_for_confirm_personal_data)
 from api_moltin import (get_product_by_id, delete_product_from_cart, get_img_by_id, push_product_to_cart_by_id,
-                        get_cart, get_total_amount_from_cart, create_customer)
+                        get_cart, get_total_amount_from_cart, create_customer, get_entries, push_address_to_customer_address)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from dotenv import load_dotenv
-from validate_email import validate_email
+from geopy.distance import distance
 
 
 logger = logging.getLogger(__name__)
@@ -107,17 +107,55 @@ def handle_cart(bot, update):
 def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
 
-    if update.message:
-        email = update.message.text.strip()
-        if validate_email(email):
-            database.set(f'{update.message.chat_id}_email', email)
-            handle_waiting_phone_number(bot, update)
-            update_message.reply_text('\nПришлите, пожалуйста, ваш номер телефона')
-            return 'WAITING_PHONE_NUMBER'
-        else:
-            update_message.reply_text(f'\nКажется, вы ввели неверный email: {email}\n Повторите попытку')
-            update_message = None
-    return 'WAITING_EMAIL'
+    if update_message.text:
+        try:
+            client_position = yandex_geocoder.Client.coordinates(update_message.text)
+        except yandex_geocoder.exceptions.YandexGeocoderAddressNotFound:
+            update_message.reply_text('Не могу распознать этот адрес')
+    else:
+        client_position = (update_message.location.latitude, update_message.location.longitude)
+
+    client_position = (float(client_position[0]), float(client_position[1]))
+    pizzerias = get_entries()['data']
+    nearest_pizzeria = min(pizzerias, key=lambda piz: distance(client_position, (piz['lon'], piz['lat'])).km)
+    distance_to_nearest_pizzeria = distance((nearest_pizzeria['lon'], nearest_pizzeria['lat']), client_position).km
+
+    id_address_client = push_address_to_customer_address(client_position)['data']['id']
+
+    keyboard = [
+        [InlineKeyboardButton('Самовызов', callback_data='Самовызов')],
+        [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{id_address_client}')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    if distance_to_nearest_pizzeria <= 0.5:
+        update_message.reply_text(f'Может заберете пиццу из нашей пиццерии неподалеку? Она всего в '
+                                  f'{int(distance_to_nearest_pizzeria*100)}м от вас.'
+                                  f'Вот её адрес: {nearest_pizzeria["address"]}\n\nА можем бесплатно доставить',
+                                  reply_markup=reply_markup)
+    elif distance_to_nearest_pizzeria <= 5:
+        update_message.reply_text(f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
+                                  f' от вас. Доставка будет стоить 100рублей. Доставка или самовызов?',
+                                  reply_markup=reply_markup)
+    elif distance_to_nearest_pizzeria <= 20:
+        update_message.reply_text(f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
+                                  f' от вас. Доставка будет стоить 300рублей. Доставка или самовызов?',
+                                  reply_markup=reply_markup)
+    else:
+        update_message.reply_text(f'Очень далеко. {int(distance_to_nearest_pizzeria)}км'
+                                  f' от вас. Только самовызов', reply_markup=reply_markup)
+
+    if update.callback_query:
+        query = update.callback_query.data.split('/')
+        if query[0] == 'Самовызов':
+            update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
+            return 'START'
+        elif update.callback_query.data[0] == 'Доставка':
+            handle_delivery(bot, update)
+            return 'DELIVERY'
+
+    database.set('nearest_pizzeria', nearest_pizzeria['address'])
+    return 'WAITING_GEO'
 
 
 def handle_waiting_phone_number(bot, update):
@@ -191,6 +229,7 @@ def handle_users_reply(bot, update):
         'DESCRIPTION': handle_description,
         'CART': handle_cart,
         'WAITING_GEO': handle_waiting_geo,
+        'DELIVERY': handle_delivery,
         'WAITING_PHONE_NUMBER': handle_waiting_phone_number,
         'CONFIRM_PERSONAL_DATA': handle_confirm_personal_data
     }
@@ -234,6 +273,7 @@ def main():
     updater = Updater(token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply, edited_updates=True))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply))
     dispatcher.add_error_handler(handle_error)

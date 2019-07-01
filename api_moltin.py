@@ -311,6 +311,14 @@ def push_addresses_to_pizzeria(file='addresses.json', flow_slug='Pizzeria'):
         create_entry(flow_slug, fields)
 
 
+def push_address_to_customer_address(position, flow_slug='customer_address'):
+    fields = {
+        'lon': position[0],
+        'lat': position[1],
+    }
+    return create_entry(flow_slug, fields)
+
+
 @is_token_works
 def push_product_to_cart_by_id(product_id, client_id, amount):
     headers = get_headers()
@@ -331,7 +339,7 @@ def push_product_to_cart_by_id(product_id, client_id, amount):
 
 def main():
     load_dotenv()
-    fields = [
+    fields_for_pizzeria = [
         {
             'name': 'address',
             'slug': 'address',
@@ -356,14 +364,36 @@ def main():
             'type': 'float',
             'description': 'Latitude'
         },
+        {
+            'name': 'courier_id',
+            'slug': 'courier_id',
+            'type': 'int',
+            'description': 'telegram id'
+        },
     ]
-    pprint(get_products(6, 0, 'https://api.moltin.com/v2/products?page[limit]=6&page[offset]=6'))
+    fields_for_customer_address = [
+        {
+            'name': 'longitude',
+            'slug': 'lon',
+            'type': 'float',
+            'description': 'Longitude'
+        },
+        {
+            'name': 'latitude',
+            'slug': 'lat',
+            'type': 'float',
+            'description': 'Latitude'
+        },
+    ]
+    # pprint(get_products(6, 0, 'https://api.moltin.com/v2/products?page[limit]=6&page[offset]=6'))
+    # pprint(get_entries())
     # delete_product_from_cart(138457307, '79da0188-f47e-481a-a0c9-9ade7381d83b')
     # pprint(get_cart(138457307))
     # pprint(get_product_from_cart('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307))
     # pprint(push_product_to_cart_by_id('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307, 1))
     # pprint(create_products())
-    # pprint(create_flow('test', 'desc'))
+    # pprint(create_flow('Customer Address', 'customer address'))
+    # pprint(create_flow_from_fields(fields_for_customer_address, 'customer_address', 'customer address'))
     # pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
     # pprint(push_addresses_to_pizzeria())
 
