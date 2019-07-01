@@ -1,5 +1,6 @@
 import re
 import os
+import json
 import redis
 import logging
 import yandex_geocoder
@@ -8,7 +9,7 @@ from description import make_text_description_cart, make_text_description_produc
 from buttons import (generate_buttons_products, generate_buttons_for_all_products_from_cart,
                      generate_buttons_for_description, generate_buttons_for_confirm_personal_data)
 from api_moltin import (get_product_by_id, delete_product_from_cart, get_img_by_id, push_product_to_cart_by_id,
-                        get_cart, get_total_amount_from_cart, create_customer, get_entries, push_address_to_customer_address)
+                        get_cart, get_total_amount_from_cart, create_customer, get_entries, push_address_to_customer_address, get_entries_by_id)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
@@ -83,8 +84,8 @@ def handle_cart(bot, update):
         handle_start(bot, update.callback_query)
         return 'MENU'
     elif update.callback_query.data == 'Оплата':
-        handle_waiting_geo(bot, update)
         update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
+        # handle_waiting_geo(bot, update)
         return 'WAITING_GEO'
     else:
         product_id = update.callback_query.data
@@ -107,12 +108,23 @@ def handle_cart(bot, update):
 def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
 
-    if update_message.text:
+    if update.callback_query:
+        query = update.callback_query.data.split('/')
+        if query[0] == 'Самовызов':
+            nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))['address']
+            update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
+            handle_start(bot, update)
+            return 'START'
+        elif query[0] == 'Доставка':
+            handle_delivery(bot, update)
+            return 'DELIVERY'
+
+    if update.message:
         try:
             client_position = yandex_geocoder.Client.coordinates(update_message.text)
         except yandex_geocoder.exceptions.YandexGeocoderAddressNotFound:
             update_message.reply_text('Не могу распознать этот адрес')
-    else:
+    elif not update.callback_query:
         client_position = (update_message.location.latitude, update_message.location.longitude)
 
     client_position = (float(client_position[0]), float(client_position[1]))
@@ -145,67 +157,29 @@ def handle_waiting_geo(bot, update):
         update_message.reply_text(f'Очень далеко. {int(distance_to_nearest_pizzeria)}км'
                                   f' от вас. Только самовызов', reply_markup=reply_markup)
 
-    if update.callback_query:
-        query = update.callback_query.data.split('/')
-        if query[0] == 'Самовызов':
-            update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
-            return 'START'
-        elif update.callback_query.data[0] == 'Доставка':
-            handle_delivery(bot, update)
-            return 'DELIVERY'
-
-    database.set('nearest_pizzeria', nearest_pizzeria['address'])
+    database.set('nearest_pizzeria', json.dumps(nearest_pizzeria))
     return 'WAITING_GEO'
 
 
-def handle_waiting_phone_number(bot, update):
+def handle_delivery(bot, update):
     update_message = update.message or update.callback_query.message
+    client_id = update_message.chat_id
+    nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))
+    _, id_address_client = update.callback_query.data.split('/')
+    entries = get_entries_by_id(id_address_client)['data']
+    lon = entries['lon']
+    lat = entries['lat']
+    cart = get_cart(client_id)
+    total_amount = get_total_amount_from_cart(client_id)
 
-    if update.message.text == database.get(f'{update.message.chat_id}_email'):
-        return 'WAITING_PHONE_NUMBER'
-
-    if re.match(r'^\+{0,1}\d+', update.message.text):
-        phone_number = update.message.text
-        phone_number = phonenumbers.parse(phone_number, 'RU')
-
-        if phonenumbers.is_valid_number(phone_number):
-            database.set(f'{update.message.chat_id}_phone', phone_number.national_number)
-
-            keyboard = generate_buttons_for_confirm_personal_data()
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            email = database.get(f'{update.message.chat_id}_email')
-            update_message.reply_text(f'\nВаш email: {email}\n'
-                                      f'Ваш номер телефона: {phone_number.national_number}',
-                                      reply_markup=reply_markup)
-            return 'CONFIRM_PERSONAL_DATA'
-        else:
-            update_message.reply_text(f'\nКажется, вы неправильно набрали номер: {phone_number.national_number}'
-                                      '\n Повторите попытку')
-            update_message = None
-    else:
-        update_message.reply_text('\nДолжны быть цифры')
-
-    return 'WAITING_PHONE_NUMBER'
+    bot.send_message(chat_id=nearest_pizzeria['courier'],
+                     text=make_text_description_cart(cart, total_amount),
+                     parse_mode=ParseMode.MARKDOWN)
+    bot.send_location(chat_id=nearest_pizzeria['courier'], latitude=lat, longitude=lon)
+    return 'DELIVERY'
 
 
-def handle_confirm_personal_data(bot, update):
-    update_message = update.message or update.callback_query.message
-    if update.callback_query.data == 'Верно':
-        name = database.get(f'{update_message.chat_id}_phone')
-        email = database.get(f'{update_message.chat_id}_email')
-        create_customer(name, email)
-        update_message.reply_text(f'В скором времени я свяжусь с вами')
-        handle_start(bot, update)
-        return 'MENU'
-    elif update.callback_query.data == 'Неверно':
-        handle_waiting_geo(bot, update)
-        update_message.reply_text('\nПришлите, пожалуйста, ваш email')
-        return 'WAITING_EMAIL'
-    return 'CONFIRM_PERSONAL_DATA'
-
-
-def handle_users_reply(bot, update):
+def handle_users_reply(bot, update, job_queue):
     database = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -223,6 +197,9 @@ def handle_users_reply(bot, update):
     else:
         user_state = database.get(chat_id)
 
+    if user_reply.startswith('Доставка'):
+        job_queue.run_once(handle_order, 10, context=chat_id)
+
     states_functions = {
         'START': handle_start,
         'MENU': handle_menu,
@@ -230,13 +207,18 @@ def handle_users_reply(bot, update):
         'CART': handle_cart,
         'WAITING_GEO': handle_waiting_geo,
         'DELIVERY': handle_delivery,
-        'WAITING_PHONE_NUMBER': handle_waiting_phone_number,
-        'CONFIRM_PERSONAL_DATA': handle_confirm_personal_data
     }
 
     state_handler = states_functions[user_state]
     next_state = state_handler(bot, update)
     database.set(chat_id, next_state)
+
+
+def handle_order(bot, job):
+    bot.send_message(chat_id=job.context, 
+                     text='Приятного аппетита! *место для рекламы*\n\n'
+                          '*сообщение что делать если пицца не пришла*',
+                     parse_mode=ParseMode.MARKDOWN)
 
 
 def get_database_connection():
@@ -272,10 +254,10 @@ def main():
     token = os.environ.get('TELEGRAM_BOT_TOKEN')
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
-    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply, edited_updates=True))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
-    dispatcher.add_handler(CommandHandler('start', handle_users_reply))
+    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply, pass_job_queue=True))
+    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply, pass_job_queue=True, edited_updates=True))
+    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply, pass_job_queue=True))
+    dispatcher.add_handler(CommandHandler('start', handle_users_reply, pass_job_queue=True))
     dispatcher.add_error_handler(handle_error)
     updater.start_polling()
 

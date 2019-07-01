@@ -152,7 +152,7 @@ def create_flow(name_flow, description):
 def create_flow_from_fields(fields, flow_name, flow_desc):
     flow_id = create_flow(flow_name, flow_desc)['data']['id']
     for field in fields:
-        create_field(field, flow_id)
+        pprint(create_field(field, flow_id))
 
 
 @is_token_works
@@ -204,6 +204,14 @@ def delete_product_from_cart(client_id, product_id):
     return response.json()
 
 
+@is_token_works
+def delete_flow(flow_id):
+    url = f'https://api.moltin.com/v2/flows/{flow_id}'
+    response = requests.delete(url, headers=get_headers(), proxies=PROXIES)
+    response.raise_for_status()
+    return response
+
+
 def get_access_token():
     payload = {
         'client_id': os.environ.get('CLIENT_ID_MOLTIN'),
@@ -249,6 +257,22 @@ def get_customers():
 @is_token_works
 def get_entries(flow_slug='Pizzeria'):
     url = f'https://api.moltin.com/v2/flows/{flow_slug}/entries'
+    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
+def get_entries_by_id(entry_id, slug='customer_address'):
+    url = f'https://api.moltin.com/v2/flows/{slug}/entries/{entry_id}'
+    response = requests.get(url, headers=get_headers(), proxies=PROXIES)
+    response.raise_for_status()
+    return response.json()
+
+
+@is_token_works
+def get_flows():
+    url = 'https://api.moltin.com/v2/flows/'
     response = requests.get(url, headers=get_headers(), proxies=PROXIES)
     response.raise_for_status()
     return response.json()
@@ -306,9 +330,10 @@ def push_addresses_to_pizzeria(file='addresses.json', flow_slug='Pizzeria'):
             'address': address['address']['full'],
             'alias': address['alias'],
             'lon': address['coordinates']['lon'],
-            'lat': address['coordinates']['lat']
-            }
-        create_entry(flow_slug, fields)
+            'lat': address['coordinates']['lat'],
+            'courier': 138457307
+        }
+        pprint(create_entry(flow_slug, fields))
 
 
 def push_address_to_customer_address(position, flow_slug='customer_address'):
@@ -344,13 +369,13 @@ def main():
             'name': 'address',
             'slug': 'address',
             'type': 'string',
-            'description': 'Pizzeria address'
+            'description': 'pizzeria address'
         },
         {
             'name': 'alias',
             'slug': 'alias',
             'type': 'string',
-            'description': 'Pizzeria name'
+            'description': 'pizzeria name'
         },
         {
             'name': 'longitude',
@@ -365,9 +390,9 @@ def main():
             'description': 'Latitude'
         },
         {
-            'name': 'courier_id',
-            'slug': 'courier_id',
-            'type': 'int',
+            'name': 'courier',
+            'slug': 'courier',
+            'type': 'integer',
             'description': 'telegram id'
         },
     ]
@@ -394,9 +419,11 @@ def main():
     # pprint(create_products())
     # pprint(create_flow('Customer Address', 'customer address'))
     # pprint(create_flow_from_fields(fields_for_customer_address, 'customer_address', 'customer address'))
-    # pprint(create_flow_from_fields(fields, 'Pizzeria', 'Ododo pizzeria'))
+    # pprint(create_flow_from_fields(fields_for_pizzeria, 'Pizzeria', 'Ododo pizzeria'))
+    pprint(push_addresses_to_pizzeria())
     # pprint(push_addresses_to_pizzeria())
-
+    # pprint(delete_flow('9ef0f5fe-05f4-4dfc-aef4-584c9453841a'))
+    pprint(get_flows())
 
 if __name__ == '__main__':
     main()
