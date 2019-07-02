@@ -44,3 +44,21 @@ def make_text_description_product(product, client):
     parts_text.append(f'К оплате: _{total_amount_product_in_cart:.2f}_\n')
 
     return '\n'.join(parts_text)
+
+
+def make_msg_depending_on_distance(distance_to_nearest_pizzeria, nearest_pizzeria):
+    if distance_to_nearest_pizzeria <= 0.5:
+        text = (f'Может заберете пиццу из нашей пиццерии неподалеку? Она всего в '
+                f'{int(distance_to_nearest_pizzeria*100)}м от вас.'
+                f'Вот её адрес: {nearest_pizzeria["address"]}\n\nА ожем бесплатно доставить')
+    elif distance_to_nearest_pizzeria <= 5:
+        text = (f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
+                f' от вас. Доставка будет стоить 100рублей. Доставка или самовызов?')
+    elif distance_to_nearest_pizzeria <= 20:
+        text = (f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
+                f' от вас. Доставка будет стоить 300рублей. Доставка или самовызов?')
+    else:
+        text = (f'Очень далеко. {int(distance_to_nearest_pizzeria)}км'
+                f' от вас. Только самовызов')
+
+    return text

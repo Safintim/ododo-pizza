@@ -5,7 +5,7 @@ import redis
 import logging
 import yandex_geocoder
 from logs_conf import LogsHandler
-from description import make_text_description_cart, make_text_description_product
+from description import make_text_description_cart, make_text_description_product, make_msg_depending_on_distance
 from buttons import (generate_buttons_products, generate_buttons_for_all_products_from_cart,
                      generate_buttons_for_description)
 from api_moltin import (get_product_by_id, delete_product_from_cart, get_img_by_id, push_product_to_cart_by_id,
@@ -139,23 +139,8 @@ def handle_waiting_geo(bot, update):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    if distance_to_nearest_pizzeria <= 0.5:
-        update_message.reply_text(f'Может заберете пиццу из нашей пиццерии неподалеку? Она всего в '
-                                  f'{int(distance_to_nearest_pizzeria*100)}м от вас.'
-                                  f'Вот её адрес: {nearest_pizzeria["address"]}\n\nА можем бесплатно доставить',
-                                  reply_markup=reply_markup)
-    elif distance_to_nearest_pizzeria <= 5:
-        update_message.reply_text(f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
-                                  f' от вас. Доставка будет стоить 100рублей. Доставка или самовызов?',
-                                  reply_markup=reply_markup)
-    elif distance_to_nearest_pizzeria <= 20:
-        update_message.reply_text(f'Похоже придется ехать до вас. {distance_to_nearest_pizzeria:.2f}км'
-                                  f' от вас. Доставка будет стоить 300рублей. Доставка или самовызов?',
-                                  reply_markup=reply_markup)
-    else:
-        update_message.reply_text(f'Очень далеко. {int(distance_to_nearest_pizzeria)}км'
-                                  f' от вас. Только самовызов', reply_markup=reply_markup)
-
+    msg = make_msg_depending_on_distance(distance_to_nearest_pizzeria, nearest_pizzeria)
+    update_message.reply_text(msg, reply_markup=reply_markup)
     database.set('nearest_pizzeria', json.dumps(nearest_pizzeria))
     return 'WAITING_GEO'
 
