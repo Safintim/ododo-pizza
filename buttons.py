@@ -17,8 +17,10 @@ def generate_buttons_products(limit=6, offset=0):
     for product in products['data']:
         keyboard.append([InlineKeyboardButton(product['name'], callback_data=product['id'])])
 
-    keyboard.append([InlineKeyboardButton('Пред', callback_data=f'prev/{prev}')])
-    keyboard.append([InlineKeyboardButton('След', callback_data=f'next/{next}')])
+    keyboard.append([
+        InlineKeyboardButton('Пред', callback_data=f'prev/{prev}'),
+        InlineKeyboardButton('След', callback_data=f'next/{next}')
+        ])
     keyboard.append([InlineKeyboardButton('Корзина', callback_data='Корзина')])
     return keyboard
 
