@@ -34,14 +34,14 @@ def handle_start(bot, update):
 def handle_menu(bot, update):
     update_message = update.message or update.callback_query.message
     query_data = update.callback_query.data
-    client = update_message.chat_id
+    client_id = update_message.chat_id
     if query_data.startswith('prev') or query_data.startswith('next'):
-        params = query_data.split('/')
+        _, *limit_offset = query_data.split('/')
 
-        if params[1] != 'None':
-            reply_markup = InlineKeyboardMarkup(generate_buttons_products(params[1], params[2]))
+        if limit_offset[0] != 'None':
+            reply_markup = InlineKeyboardMarkup(generate_buttons_products(limit_offset[0], limit_offset[1]))
             update_message.reply_text('Пожалуйста, выберите товар:', reply_markup=reply_markup)
-            bot.delete_message(chat_id=client, message_id=update_message.message_id)
+            bot.delete_message(chat_id=client_id, message_id=update_message.message_id)
         return 'MENU'
 
     product_id = query_data
@@ -53,13 +53,13 @@ def handle_menu(bot, update):
     keyboard = generate_buttons_for_description(product_id)
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_photo(
-        chat_id=client,
+        chat_id=client_id,
         photo=url_img_product,
-        caption=make_text_description_product(product, client),
+        caption=make_text_description_product(product, client_id),
         reply_markup=reply_markup,
         parse_mode=ParseMode.MARKDOWN)
     bot.delete_message(
-        chat_id=client,
+        chat_id=client_id,
         message_id=update_message.message_id)
 
     return 'DESCRIPTION'
@@ -109,13 +109,12 @@ def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
 
     if update.callback_query:
-        query = update.callback_query.data.split('/')
-        if query[0] == 'Самовызов':
+        if update.callback_query.data.startswith('Самовызов'):
             nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))['address']
             update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
             handle_start(bot, update)
             return 'START'
-        elif query[0] == 'Доставка':
+        elif update.callback_query.data.startswith('Доставка'):
             handle_delivery(bot, update)
             return 'DELIVERY'
 
@@ -175,10 +174,10 @@ def handle_delivery(bot, update):
         lon = entries['lon']
         lat = entries['lat']
         bot.send_message(chat_id=nearest_pizzeria['courier'],
-                     text=make_text_description_cart(cart, total_amount),
-                     parse_mode=ParseMode.MARKDOWN)
+                         text=make_text_description_cart(cart, total_amount),
+                         parse_mode=ParseMode.MARKDOWN)
         bot.send_location(chat_id=nearest_pizzeria['courier'], latitude=lat, longitude=lon)
-        
+
         keyboard = [
             [InlineKeyboardButton('Оплатить', callback_data=f'{total_amount_rub}')]
         ]
