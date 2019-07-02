@@ -7,12 +7,13 @@ import yandex_geocoder
 from logs_conf import LogsHandler
 from description import make_text_description_cart, make_text_description_product
 from buttons import (generate_buttons_products, generate_buttons_for_all_products_from_cart,
-                     generate_buttons_for_description, generate_buttons_for_confirm_personal_data)
+                     generate_buttons_for_description)
 from api_moltin import (get_product_by_id, delete_product_from_cart, get_img_by_id, push_product_to_cart_by_id,
-                        get_cart, get_total_amount_from_cart, create_customer, get_entries, push_address_to_customer_address, get_entries_by_id)
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+                        get_cart, get_total_amount_from_cart, get_entries, push_address_to_customer_address,
+                        get_entries_by_id)
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, LabeledPrice
 from telegram.ext import Filters, Updater
-from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
+from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler, PreCheckoutQueryHandler
 from dotenv import load_dotenv
 from geopy.distance import distance
 
@@ -85,7 +86,6 @@ def handle_cart(bot, update):
         return 'MENU'
     elif update.callback_query.data == 'Оплата':
         update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
-        # handle_waiting_geo(bot, update)
         return 'WAITING_GEO'
     else:
         product_id = update.callback_query.data
@@ -163,20 +163,70 @@ def handle_waiting_geo(bot, update):
 
 def handle_delivery(bot, update):
     update_message = update.message or update.callback_query.message
+    query = update.callback_query.data
     client_id = update_message.chat_id
     nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))
-    _, id_address_client = update.callback_query.data.split('/')
-    entries = get_entries_by_id(id_address_client)['data']
-    lon = entries['lon']
-    lat = entries['lat']
     cart = get_cart(client_id)
     total_amount = get_total_amount_from_cart(client_id)
-
-    bot.send_message(chat_id=nearest_pizzeria['courier'],
+    total_amount_rub = total_amount['data']['meta']['display_price']['with_tax']['amount']
+    if query.startswith('Доставка'):
+        _, id_address_client = query.split('/')    
+        entries = get_entries_by_id(id_address_client)['data']
+        lon = entries['lon']
+        lat = entries['lat']
+        bot.send_message(chat_id=nearest_pizzeria['courier'],
                      text=make_text_description_cart(cart, total_amount),
                      parse_mode=ParseMode.MARKDOWN)
-    bot.send_location(chat_id=nearest_pizzeria['courier'], latitude=lat, longitude=lon)
+        bot.send_location(chat_id=nearest_pizzeria['courier'], latitude=lat, longitude=lon)
+        
+        keyboard = [
+            [InlineKeyboardButton('Оплатить', callback_data=f'{total_amount_rub}')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update_message.reply_text('Для оплаты нажмите кнопку Оплатить', reply_markup=reply_markup)
+
+    if str(update.callback_query.data) == str(total_amount_rub):
+        handle_without_shipping(bot, update)
+        return 'WITHOUT_SHIPPING'
     return 'DELIVERY'
+
+
+def handle_without_shipping(bot, update):
+    print('handle_without_shipping')
+    update_message = update.message or update.callback_query.message
+    chat_id = update_message.chat_id
+    title = 'Payment Example'
+    description = 'Payment Example using python-telegram-bot'
+    payload = 'Payload'
+    provider_token = os.environ.get('PAYMENT_TOKEN_TRANZZO')
+    print(provider_token)
+    start_parameter = 'test-payment'
+    currency = 'RUB'
+    price = float(update.callback_query.data)
+    prices = [LabeledPrice('Test', int(price * 100))]
+    bot.send_invoice(chat_id, title, description, payload,
+                     provider_token, start_parameter, currency, prices)
+    # handle_precheckout(bot, update)
+    return 'PRECHECKOUT'
+
+
+def handle_precheckout(bot, update):
+    print('handle_precheckout')
+    query = update.pre_checkout_query
+    if query.invoice_payload != 'Payload':
+
+        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
+                                      error_message='Что-то пошло не так...')
+    else:
+        bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
+
+    return 'SUCCESSFUL_PAYMENT'
+
+
+def handle_successful_payment(bot, update):
+    update.message.reply_text('Спасибо за покупку')
+
+    return 'START'
 
 
 def handle_users_reply(bot, update, job_queue):
@@ -207,6 +257,9 @@ def handle_users_reply(bot, update, job_queue):
         'CART': handle_cart,
         'WAITING_GEO': handle_waiting_geo,
         'DELIVERY': handle_delivery,
+        'WITHOUT_SHIPPING': handle_without_shipping,
+        'PRECHECKOUT': handle_precheckout,
+        'SUCCESSFUL_PAYMENT': handle_successful_payment
     }
 
     state_handler = states_functions[user_state]
@@ -215,7 +268,7 @@ def handle_users_reply(bot, update, job_queue):
 
 
 def handle_order(bot, job):
-    bot.send_message(chat_id=job.context, 
+    bot.send_message(chat_id=job.context,
                      text='Приятного аппетита! *место для рекламы*\n\n'
                           '*сообщение что делать если пицца не пришла*',
                      parse_mode=ParseMode.MARKDOWN)
@@ -255,9 +308,13 @@ def main():
     updater = Updater(token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply, pass_job_queue=True))
-    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply, pass_job_queue=True, edited_updates=True))
+    dispatcher.add_handler(MessageHandler(Filters.location, handle_users_reply,
+                                          pass_job_queue=True,
+                                          edited_updates=True))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply, pass_job_queue=True))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply, pass_job_queue=True))
+    dispatcher.add_handler(PreCheckoutQueryHandler(handle_users_reply, pass_job_queue=True))
+    dispatcher.add_handler(MessageHandler(Filters.successful_payment, handle_users_reply))
     dispatcher.add_error_handler(handle_error)
     updater.start_polling()
 
