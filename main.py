@@ -176,41 +176,34 @@ def handle_delivery(bot, update):
 
 
 def handle_without_shipping(bot, update):
-    print('handle_without_shipping')
     update_message = update.message or update.callback_query.message
     chat_id = update_message.chat_id
     title = 'Payment Example'
     description = 'Payment Example using python-telegram-bot'
     payload = 'Payload'
     provider_token = os.environ.get('PAYMENT_TOKEN_TRANZZO')
-    print(provider_token)
     start_parameter = 'test-payment'
     currency = 'RUB'
     price = float(update.callback_query.data)
     prices = [LabeledPrice('Test', int(price * 100))]
     bot.send_invoice(chat_id, title, description, payload,
                      provider_token, start_parameter, currency, prices)
-    # handle_precheckout(bot, update)
-    return 'PRECHECKOUT'
+    return 'START'
 
 
 def handle_precheckout(bot, update):
-    print('handle_precheckout')
     query = update.pre_checkout_query
     if query.invoice_payload != 'Payload':
 
         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
                                       error_message='Что-то пошло не так...')
+        handle_start(bot, update)
     else:
         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
-
-    return 'SUCCESSFUL_PAYMENT'
 
 
 def handle_successful_payment(bot, update):
     update.message.reply_text('Спасибо за покупку')
-
-    return 'START'
 
 
 def handle_users_reply(bot, update, job_queue):
@@ -242,8 +235,6 @@ def handle_users_reply(bot, update, job_queue):
         'WAITING_GEO': handle_waiting_geo,
         'DELIVERY': handle_delivery,
         'WITHOUT_SHIPPING': handle_without_shipping,
-        'PRECHECKOUT': handle_precheckout,
-        'SUCCESSFUL_PAYMENT': handle_successful_payment
     }
 
     state_handler = states_functions[user_state]
@@ -297,8 +288,8 @@ def main():
                                           edited_updates=True))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply, pass_job_queue=True))
     dispatcher.add_handler(CommandHandler('start', handle_users_reply, pass_job_queue=True))
-    dispatcher.add_handler(PreCheckoutQueryHandler(handle_users_reply, pass_job_queue=True))
-    dispatcher.add_handler(MessageHandler(Filters.successful_payment, handle_users_reply))
+    dispatcher.add_handler(PreCheckoutQueryHandler(handle_precheckout))
+    dispatcher.add_handler(MessageHandler(Filters.successful_payment, handle_successful_payment))
     dispatcher.add_error_handler(handle_error)
     updater.start_polling()
 
