@@ -331,7 +331,7 @@ def push_addresses_to_pizzeria(file='addresses.json', flow_slug='Pizzeria'):
             'alias': address['alias'],
             'lon': address['coordinates']['lon'],
             'lat': address['coordinates']['lat'],
-            'courier': 138457307
+            'courier': os.environ.get('LOGS_RECEIVER_ID')
         }
         pprint(create_entry(flow_slug, fields))
 
