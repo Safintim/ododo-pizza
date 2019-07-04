@@ -410,20 +410,12 @@ def main():
             'description': 'Latitude'
         },
     ]
-    # pprint(get_products(6, 0, 'https://api.moltin.com/v2/products?page[limit]=6&page[offset]=6'))
-    # pprint(get_entries())
-    # delete_product_from_cart(138457307, '79da0188-f47e-481a-a0c9-9ade7381d83b')
-    # pprint(get_cart(138457307))
-    # pprint(get_product_from_cart('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307))
-    # pprint(push_product_to_cart_by_id('5d8e3456-1016-4e6e-a5fa-5c45e1383e32', 138457307, 1))
-    # pprint(create_products())
-    # pprint(create_flow('Customer Address', 'customer address'))
-    # pprint(create_flow_from_fields(fields_for_customer_address, 'customer_address', 'customer address'))
-    # pprint(create_flow_from_fields(fields_for_pizzeria, 'Pizzeria', 'Ododo pizzeria'))
-    pprint(push_addresses_to_pizzeria())
-    # pprint(push_addresses_to_pizzeria())
-    # pprint(delete_flow('9ef0f5fe-05f4-4dfc-aef4-584c9453841a'))
-    pprint(get_flows())
+
+    create_products()
+    create_flow_from_fields(fields_for_pizzeria, 'Pizzeria', 'Ododo pizzeria')
+    push_addresses_to_pizzeria()
+    create_flow_from_fields(fields_for_customer_address, 'customer_address', 'customer address')
+
 
 if __name__ == '__main__':
     main()
