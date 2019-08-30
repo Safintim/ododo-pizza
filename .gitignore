@@ -2,5 +2,6 @@ images/
 __pycache__/
 .vscode/
 .venv/
+.idea/
 .env
 *.json
