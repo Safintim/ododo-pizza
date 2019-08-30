@@ -7,7 +7,13 @@ def make_text_description_cart(cart, total_amount):
 
         name = product['name']
         description = product['description']
-        price = product['meta']['display_price']['with_tax']['unit']['formatted']
+
+        product_metadata = product['meta']
+        product_display_price = product_metadata['display_price']
+        product_display_price_with_tax = product_display_price['with_tax']
+        product_display_price_unit = product_display_price_with_tax['unit']
+        price = product_display_price_unit['formatted']
+
         quantity = product['quantity']
         total_amount_product = product['value']['amount']
 
@@ -16,7 +22,12 @@ def make_text_description_cart(cart, total_amount):
         parts_text.append(f'Цена *{price}* рублей')
         parts_text.append(f'Количество пицц: *{quantity}*, *{total_amount_product:.2f} РУБ* рублей\n')
 
-    total_amount = total_amount['data']['meta']['display_price']['with_tax']['formatted']
+    total_amount_data = total_amount['data']
+    total_amount_metadata = total_amount_data['meta']
+    total_amount_display_price = total_amount_metadata['display_price']
+    total_amount_with_tax = total_amount_display_price['with_tax']
+    total_amount = total_amount_with_tax['formatted']
+
     parts_text.append(f'*Цена за все пиццы в корзине: {total_amount} РУБ*')
     return '\n'.join(parts_text)
 
@@ -31,10 +42,15 @@ def make_text_description_product(product, client):
     parts_text = []
     if product_from_cart:
         quantity_product_in_cart = product_from_cart['quantity']
-        total_amount_product_in_cart = product_from_cart['value']['amount']
+        product_from_cart_value = product_from_cart['value']
+        total_amount_product_in_cart = product_from_cart_value['amount']
 
     name = product['name']
-    price = product['price'][0]['amount']
+
+    prices = product['price']
+    first_price = prices[0]
+    price = first_price['amount']
+
     description = product['description']
 
     parts_text.append(f'*{name}*\n')
