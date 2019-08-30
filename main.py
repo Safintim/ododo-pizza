@@ -109,7 +109,7 @@ def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
 
     if update.callback_query:
-        if update.callback_query.data.startswith('Самовызов'):
+        if update.callback_query.data.startswith('Самовывоз'):
             nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))['address']
             update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
             handle_start(bot, update)
