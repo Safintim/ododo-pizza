@@ -128,7 +128,7 @@ PROXY_PROTOCOL=protocol_proxy_server
 ```
 
 ```sh
-python3 api_moltin.py
+python3 load_products_to_moltin.py
 ```
 
 ```sh
