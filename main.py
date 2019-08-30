@@ -130,6 +130,8 @@ def handle_waiting_geo(bot, update):
             client_position = yandex_geocoder.Client.coordinates(update_message.text)
         except yandex_geocoder.exceptions.YandexGeocoderAddressNotFound:
             update_message.reply_text('Не могу распознать этот адрес')
+            update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
+            return 'WAITING_GEO'
     elif not update.callback_query:
         client_position = (update_message.location.latitude, update_message.location.longitude)
 
@@ -148,7 +150,8 @@ def handle_waiting_geo(bot, update):
 
     msg = make_msg_depending_on_distance(distance_to_nearest_pizzeria, nearest_pizzeria)
     update_message.reply_text(msg, reply_markup=reply_markup)
-    database.set('nearest_pizzeria', json.dumps(nearest_pizzeria))
+    client_id = update_message.chat_id
+    database.set(f'nearest_pizzeria/{client_id}', json.dumps(nearest_pizzeria))
     return 'WAITING_GEO'
 
 
@@ -156,7 +159,7 @@ def handle_delivery(bot, update):
     update_message = update.message or update.callback_query.message
     query = update.callback_query.data
     client_id = update_message.chat_id
-    nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))
+    nearest_pizzeria = json.loads(database.get(f'nearest_pizzeria/{client_id}'))
     cart = get_cart(client_id)
     total_amount = get_total_amount_from_cart(client_id)
 
