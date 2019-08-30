@@ -309,9 +309,9 @@ def get_product_by_id(id):
 
 
 def get_product_from_cart(product_id, client_id):
-    for pr in get_cart(client_id)['data']:
-        if pr['product_id'] == product_id:
-            return pr
+    for product in get_cart(client_id)['data']:
+        if product['product_id'] == product_id:
+            return product
 
 
 @is_token_works
