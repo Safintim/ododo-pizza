@@ -4,7 +4,7 @@ import random
 import requests
 from tools import convert_str_to_slug, download_and_save_img
 from pprint import pprint
-from dotenv import load_dotenv
+
 
 PROXY_IP = os.environ.get('PROXY_IP')
 PROXY_PROTOCOL = os.environ.get('PROXY_PROTOCOL', 'http')
