@@ -71,29 +71,30 @@ def handle_menu(bot, update):
 
 def handle_description(bot, update):
     client_id = update.callback_query.message.chat_id
-    regex = r'[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}'
     if update.callback_query.data == 'В меню':
         handle_start(bot, update.callback_query)
         return 'MENU'
-    elif re.match(regex, update.callback_query.data):
+    elif is_product_id(update.callback_query.data):
         amount, product = 1, update.callback_query.data
         push_product_to_cart_by_id(product, client_id, amount)
-        return 'DESCRIPTION'
-    else:
-        return 'DESCRIPTION'
+    return 'DESCRIPTION'
+
+
+def is_product_id(id):
+    regex = r'[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}'
+    return re.match(regex, id)
 
 
 def handle_cart(bot, update):
     client_id = update.callback_query.message.chat_id
     update_message = update.message or update.callback_query.message
-
     if update.callback_query.data == 'В меню':
         handle_start(bot, update.callback_query)
         return 'MENU'
     elif update.callback_query.data == 'Оплата':
         update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
         return 'WAITING_GEO'
-    else:
+    elif is_product_id(update.callback_query.data):
         product_id = update.callback_query.data
         delete_product_from_cart(client_id, product_id)
 
