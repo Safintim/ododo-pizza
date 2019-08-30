@@ -66,6 +66,8 @@ LOGS_RECEIVER_ID=your_chat_id
 REDIS_HOST=your_redis_host
 REDIS_PASSWORD=your_redis_password
 REDIS_PORT=your_redis_port
+PROXY_IP=ip_proxy_server
+PROXY_PROTOCOL=protocol_proxy_server
 ```
 
 ## Как использовать
