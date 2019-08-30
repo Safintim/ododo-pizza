@@ -79,6 +79,8 @@ def handle_description(bot, update):
         amount, product = 1, update.callback_query.data
         push_product_to_cart_by_id(product, client_id, amount)
         return 'DESCRIPTION'
+    else:
+        return 'DESCRIPTION'
 
 
 def handle_cart(bot, update):
