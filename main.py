@@ -36,10 +36,10 @@ def handle_menu(bot, update):
     query_data = update.callback_query.data
     client_id = update_message.chat_id
     if query_data.startswith('prev') or query_data.startswith('next'):
-        _, *limit_offset = query_data.split('/')
 
-        if limit_offset[0] != 'None':
-            reply_markup = InlineKeyboardMarkup(generate_buttons_products(limit_offset[0], limit_offset[1]))
+        button_name, limit, offset = query_data.split('/')
+        if limit != 'None':
+            reply_markup = InlineKeyboardMarkup(generate_buttons_products(limit, offset))
             update_message.reply_text('Пожалуйста, выберите товар:', reply_markup=reply_markup)
             bot.delete_message(chat_id=client_id, message_id=update_message.message_id)
         return 'MENU'

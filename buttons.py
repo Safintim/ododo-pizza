@@ -6,14 +6,13 @@ from tools import get_query_params_from_url
 def generate_buttons_products(limit=6, offset=0):
     keyboard = []
     products = get_products(limit, offset)
-    prev = None
-    next = None
+    next = prev = 'None/None'
     if products['links'].get('prev'):
-        prev = get_query_params_from_url(products['links']['prev'])
-        prev = f'{prev[0]}/{prev[1]}'
+        limit, offset = get_query_params_from_url(products['links']['prev'])
+        prev = f'{limit}/{offset}'
     if products['links'].get('next'):
-        next = get_query_params_from_url(products['links']['next'])
-        next = f'{next[0]}/{next[1]}'
+        limit, offset = get_query_params_from_url(products['links']['next'])
+        next = f'{limit}/{offset}'
     for product in products['data']:
         keyboard.append([InlineKeyboardButton(product['name'], callback_data=product['id'])])
 
