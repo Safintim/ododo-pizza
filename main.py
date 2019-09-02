@@ -71,11 +71,12 @@ def handle_menu(bot, update):
 
 def handle_description(bot, update):
     client_id = update.callback_query.message.chat_id
-    if update.callback_query.data == 'В меню':
+    query_data = update.callback_query.data
+    if query_data == 'В меню':
         handle_start(bot, update.callback_query)
         return 'MENU'
-    elif is_product_id(update.callback_query.data):
-        amount, product = 1, update.callback_query.data
+    elif is_product_id(query_data):
+        amount, product = 1, query_data
         push_product_to_cart_by_id(product, client_id, amount)
     return 'DESCRIPTION'
 
@@ -88,14 +89,15 @@ def is_product_id(id):
 def handle_cart(bot, update):
     client_id = update.callback_query.message.chat_id
     update_message = update.message or update.callback_query.message
-    if update.callback_query.data == 'В меню':
+    query_data = update.callback_query.data
+    if query_data == 'В меню':
         handle_start(bot, update.callback_query)
         return 'MENU'
-    elif update.callback_query.data == 'Оплата':
+    elif query_data == 'Оплата':
         update_message.reply_text('\nПришлите, пожалуйста, ваш адрес текстом или геолокацию')
         return 'WAITING_GEO'
-    elif is_product_id(update.callback_query.data):
-        product_id = update.callback_query.data
+    elif is_product_id(query_data):
+        product_id = query_data
         delete_product_from_cart(client_id, product_id)
 
     cart = get_cart(client_id)
@@ -114,14 +116,14 @@ def handle_cart(bot, update):
 
 def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
-
+    query_data = update.callback_query.data
     if update.callback_query:
-        if update.callback_query.data.startswith('Самовывоз'):
+        if query_data.startswith('Самовывоз'):
             nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))['address']
             update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
             handle_start(bot, update)
             return 'START'
-        elif update.callback_query.data.startswith('Доставка'):
+        elif query_data.startswith('Доставка'):
             handle_delivery(bot, update)
             return 'DELIVERY'
 
@@ -157,7 +159,7 @@ def handle_waiting_geo(bot, update):
 
 def handle_delivery(bot, update):
     update_message = update.message or update.callback_query.message
-    query = update.callback_query.data
+    query_data = update.callback_query.data
     client_id = update_message.chat_id
     nearest_pizzeria = json.loads(database.get(f'nearest_pizzeria/{client_id}'))
     cart = get_cart(client_id)
@@ -169,8 +171,8 @@ def handle_delivery(bot, update):
     total_amount_with_tax = total_amount_display_price['with_tax']
     total_amount_rub = total_amount_with_tax['amount']
 
-    if query.startswith('Доставка'):
-        _, id_address_client = query.split('/')    
+    if query_data.startswith('Доставка'):
+        _, id_address_client = query_data.split('/')
         entries = get_entries_by_id(id_address_client)['data']
         lon = entries['lon']
         lat = entries['lat']
@@ -185,7 +187,7 @@ def handle_delivery(bot, update):
         reply_markup = InlineKeyboardMarkup(keyboard)
         update_message.reply_text('Для оплаты нажмите кнопку Оплатить', reply_markup=reply_markup)
 
-    if str(update.callback_query.data) == str(total_amount_rub):
+    if str(query_data) == str(total_amount_rub):
         handle_without_shipping(bot, update)
         return 'WITHOUT_SHIPPING'
     return 'DELIVERY'
