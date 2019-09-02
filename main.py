@@ -87,8 +87,8 @@ def is_product_id(id):
 
 
 def handle_cart(bot, update):
-    client_id = update.callback_query.message.chat_id
     update_message = update.message or update.callback_query.message
+    client_id = update_message.chat_id
     query_data = update.callback_query.data
     if query_data == 'В меню':
         handle_start(bot, update.callback_query)
@@ -116,10 +116,11 @@ def handle_cart(bot, update):
 
 def handle_waiting_geo(bot, update):
     update_message = update.message or update.callback_query.message
+    client_id = update_message.chat_id
     query_data = update.callback_query.data
     if update.callback_query:
         if query_data.startswith('Самовывоз'):
-            nearest_pizzeria = json.loads(database.get('nearest_pizzeria'))['address']
+            nearest_pizzeria = json.loads(database.get(f'nearest_pizzeria/{client_id}'))['address']
             update_message.reply_text(f'Адрес ближайшей пиццерии: {nearest_pizzeria}. До свидания')
             handle_start(bot, update)
             return 'START'
@@ -152,7 +153,6 @@ def handle_waiting_geo(bot, update):
 
     msg = make_msg_depending_on_distance(distance_to_nearest_pizzeria, nearest_pizzeria)
     update_message.reply_text(msg, reply_markup=reply_markup)
-    client_id = update_message.chat_id
     database.set(f'nearest_pizzeria/{client_id}', json.dumps(nearest_pizzeria))
     return 'WAITING_GEO'
 
