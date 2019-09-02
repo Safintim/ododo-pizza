@@ -145,7 +145,7 @@ def handle_waiting_geo(bot, update):
     id_address_client = push_address_to_customer_address(client_position)['data']['id']
 
     keyboard = [
-        [InlineKeyboardButton('Самовызов', callback_data='Самовызов')],
+        [InlineKeyboardButton('Самовывоз', callback_data='Самовывоз')],
         [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{id_address_client}')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
