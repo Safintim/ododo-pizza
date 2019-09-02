@@ -41,7 +41,6 @@ def add_img_to_product(product_id, img_id):
 
     url = f'https://api.moltin.com/v2/products/{product_id}/relationships/main-image'
     response = requests.post(url, headers=headers, json={'data': data}, proxies=PROXIES)
-    print(response.json())
     response.raise_for_status()
     return response.json()
 
@@ -87,7 +86,6 @@ def create_entry(flow_slug, fields):
 def create_file(file):
     headers = get_headers()
 
-    print(file)
     with open(file, 'rb') as f:
         files = {
             'file': f,
@@ -190,11 +188,10 @@ def create_products(file='menu.json'):
         products = json.load(file)
 
     for product in products:
-        product_data = create_product(product)['data']
-        product_image = product['product_image']
-        path_to_img = download_and_save_img(product_image['url'], product['name'])
-        img_data = create_file(path_to_img)['data']
-        add_img_to_product(product_data['id'], img_data['id'])
+        product_id = create_product(product)['data']['id']
+        path_to_img = download_and_save_img(product['product_image']['url'], product['name'])
+        img_id = create_file(path_to_img)['data']['id']
+        add_img_to_product(product_id, img_id)
 
 
 @is_token_works
@@ -284,9 +281,7 @@ def get_img_by_id(id):
     url = f'https://api.moltin.com/v2/files/{id}'
     response = requests.get(url, headers=get_headers(), proxies=PROXIES)
     response.raise_for_status()
-    img_data = response.json()['data']
-    img_link = img_data['link']
-    return img_link['href']
+    return response.json()['data']['link']['href']
 
 
 @is_token_works

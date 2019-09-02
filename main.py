@@ -36,7 +36,6 @@ def handle_menu(bot, update):
     query_data = update.callback_query.data
     client_id = update_message.chat_id
     if query_data.startswith('prev') or query_data.startswith('next'):
-
         button_name, limit, offset = query_data.split('/')
         if limit != 'None':
             reply_markup = InlineKeyboardMarkup(generate_buttons_products(limit, offset))
@@ -47,12 +46,8 @@ def handle_menu(bot, update):
     product_id = query_data
     product = get_product_by_id(product_id)
 
-    product_data = product['data']
-    product_relationships = product_data['relationships']
-    product_main_image = product_relationships['main_image']
-    img_data = product_main_image['data']
-
-    url_img_product = get_img_by_id(img_data['id'])
+    img_id = product['data']['relationships']['main_image']['data']['id']
+    url_img_product = get_img_by_id(img_id)
 
     keyboard = generate_buttons_for_description(product_id)
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -165,11 +160,7 @@ def handle_delivery(bot, update):
     cart = get_cart(client_id)
     total_amount = get_total_amount_from_cart(client_id)
 
-    total_amount_data = total_amount['data']
-    total_amount_metadata = total_amount_data['meta']
-    total_amount_display_price = total_amount_metadata['display_price']
-    total_amount_with_tax = total_amount_display_price['with_tax']
-    total_amount_rub = total_amount_with_tax['amount']
+    total_amount_rub = total_amount['data']['meta']['display_price']['with_tax']['amount']
 
     if query_data.startswith('Доставка'):
         _, id_address_client = query_data.split('/')
